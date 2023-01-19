@@ -1,0 +1,36 @@
+version: "3.7"
+
+services:
+  db:
+    container_name: db-${APP_NAME}-${ENV_NAME}
+    image: postgres:10-alpine3.14
+    env_file:
+      - .env
+    ports:
+      - "${EXTERNAL_PORT_DB}:5432"
+    volumes:
+      - ./postgres-data:/var/lib/postgresql/data/pgdata
+    restart: always
+    
+  backend:
+    container_name: ${APP_NAME}-${ENV_NAME}
+    image: ${APP_NAME}:${ENV_NAME}
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+      args:
+        APP_NAME: ${APP_NAME}
+    env_file:
+      - .env
+    ports:
+      - "${EXTERNAL_PORT_HTTP}:80"
+      - "${EXTERNAL_PORT_HTTPS}:443"
+    logging:
+      driver: gelf
+      options:
+        gelf-address: ${GELF_ADDRESS:-udp://52.72.255.65:9002}
+        tag: ${APP_NAME}
+        env: ${ENV_NAME}
+    restart: always
+    depends_on:
+      - db
